@@ -32,3 +32,22 @@ Pushing to `main` deploys `dist/` to GitHub Pages (`.github/workflows/deploy.yml
   release file (sha256 `7e70323ba7f259649dd4acce97ac4fefbae8102b2c6d91e2e7be613fd5354be0`).
 - [Tango / ya-webadb](https://github.com/yume-chan/ya-webadb) by Simon Chan (MIT) for ADB over WebUSB and the scrcpy client.
   Tango supports scrcpy-server up to 3.3.3, which is why the site ships that version.
+
+## Diagnostics
+
+The page sends anonymous events (browser, OS, phone model, connection steps, errors, whether video
+started) to a collector on the maintainer's Mac, published with Tailscale Funnel at
+`https://sulavs-macbook-m1-pro.tail3e4538.ts.net/e`. Nothing is sent from localhost, and no screen content,
+input, IP address or persistent ID is recorded.
+
+On that Mac:
+
+```sh
+npm run watch            # live, formatted event feed (last 20 first)
+npm run watch:errors     # only failures
+```
+
+- Collector: `telemetry/collector.js`, run by the LaunchAgent `com.sulavtimsina.android-mirror-telemetry`
+- Log: `~/android-mirror-telemetry/events.jsonl` (stops growing at 50 MB)
+- Stop publishing: `tailscale funnel --https=443 off`
+- Stop collector: `launchctl bootout gui/$(id -u)/com.sulavtimsina.android-mirror-telemetry`

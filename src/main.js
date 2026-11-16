@@ -183,6 +183,13 @@ async function connect() {
       ? new WebGLVideoFrameRenderer(canvas)
       : new BitmapVideoFrameRenderer(canvas);
     const decoder = new WebCodecsVideoDecoder({ codec: video.metadata.codec, renderer });
+    // The stream may not know the size until the first config packet; the decoder always does.
+    decoder.sizeChanged(({ width, height }) => {
+      if (!videoW || !videoH) {
+        videoW = width;
+        videoH = height;
+      }
+    });
     video.stream.pipeTo(decoder.writable).catch((err) => console.warn('Video stream ended', err));
 
     session = { adb, client, decoder, name: video.metadata.deviceName || device.name };
@@ -200,7 +207,9 @@ async function connect() {
     setTimeout(() => {
       if (session !== current) return;
       if (decoder.framesRendered > 0) {
-        track('video_ok', { frames: decoder.framesRendered, skipped: decoder.framesSkipped });
+        track('video_ok', {
+          frames: decoder.framesRendered, skipped: decoder.framesSkipped, width: videoW, height: videoH,
+        });
       } else {
         track('no_video', { frames: 0, serverLog: serverLog.join(' | ') });
       }
