@@ -127,3 +127,11 @@ button:disabled { opacity: .5; cursor: default; }
   .controls { flex-direction: row; flex-wrap: wrap; justify-content: center; }
   .controls hr { display: none; }
 }
+
+a { color: var(--accent); }
+code { background: #252a32; padding: 1px 5px; border-radius: 4px; }
+.steps { max-width: 300px; text-align: left; font-size: 13px; }
+.steps h1 { font-size: 17px; color: var(--text); margin: 0 0 10px; }
+.steps ol { padding-left: 18px; margin: 0 0 10px; }
+.steps li { margin-bottom: 8px; }
+.steps .small { font-size: 12px; }

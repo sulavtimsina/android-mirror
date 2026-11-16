@@ -4,15 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Android Mirror</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="description" content="Mirror and control your Android phone in the browser over USB. Nothing is installed and no data leaves your computer.">
+  <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
   <header class="bar">
     <strong class="brand">Android Mirror</strong>
-    <label>Device
-      <select id="device"></select>
-    </label>
-    <button id="refresh" title="Refresh device list">↻</button>
     <label>Size
       <select id="maxSize">
         <option value="0">Native</option>
@@ -36,15 +33,24 @@
         <option value="60" selected>60</option>
       </select>
     </label>
-    <button id="connect" class="primary">Connect</button>
-    <span id="status" class="status">Disconnected</span>
+    <button id="connect" class="primary">Connect phone</button>
+    <span id="status" class="status" role="status">Not connected</span>
   </header>
 
   <main class="stage">
     <div class="screen-wrap">
       <canvas id="screen" tabindex="0" width="360" height="760"></canvas>
       <div id="placeholder" class="placeholder">
-        <p>Connect an Android phone over USB with <b>USB debugging</b> enabled, then press <b>Connect</b>.</p>
+        <div class="steps">
+          <h1>Mirror your Android phone</h1>
+          <ol>
+            <li>On the phone, turn on <b>Developer options → USB debugging</b>.</li>
+            <li>Connect it to this computer with a USB cable.</li>
+            <li>If you have <code>adb</code> installed, run <code>adb kill-server</code> first. Only one program can use the phone at a time.</li>
+            <li>Press <b>Connect phone</b>, pick your phone in the browser's list, then tap <b>Allow</b> on the phone.</li>
+          </ol>
+          <p class="small">Runs entirely in your browser over WebUSB. Nothing is uploaded. Needs Chrome or Edge on a computer.</p>
+        </div>
       </div>
     </div>
     <nav class="controls" aria-label="Device controls">
@@ -64,9 +70,11 @@
   </main>
 
   <footer class="hint">
-    Click/drag = touch · Right click = back · Middle click = home · Wheel = scroll · Click the screen, then type to send keys · Ctrl/⌘+V pastes your clipboard
+    Click/drag = touch · Right click = back · Middle click = home · Wheel = scroll · Click the screen, then type · Ctrl/⌘+V pastes your clipboard ·
+    Uses <a href="https://github.com/Genymobile/scrcpy" target="_blank" rel="noopener">scrcpy</a> and
+    <a href="https://github.com/yume-chan/ya-webadb" target="_blank" rel="noopener">Tango</a>
   </footer>
 
-  <script type="module" src="app.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

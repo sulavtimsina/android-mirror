@@ -1,41 +1,34 @@
 # Android Mirror
 
-Mirror and control an Android phone from a browser tab.
+Mirror and control your Android phone from a browser tab: **https://sulavtimsina.com/android-mirror/**
 
-The Node server uses `adb` to start the scrcpy server on the phone. It reads the H.264 video stream
-and sends it to the browser over a WebSocket. The browser decodes it with WebCodecs and draws it
-on a canvas. Mouse, touch, wheel and keyboard input go back as scrcpy control messages.
+Everything runs in the visitor's browser. The page talks ADB to the phone plugged into *their*
+computer over WebUSB, starts scrcpy-server on the phone, decodes its H.264 stream with WebCodecs,
+and sends touch, scroll and key input back. There is no backend, and no video or input leaves the computer.
 
-## Requirements
+## Using it
 
-- macOS/Linux with Node.js 18+
-- `adb` and `scrcpy` (the server uses the `scrcpy-server` file that ships with scrcpy):
-  `brew install scrcpy android-platform-tools`
-- A browser with WebCodecs: Chrome, Edge, or Safari 16.4+
-- A phone with **Developer options → USB debugging** enabled (accept the RSA prompt on the phone)
+1. On the phone: Developer options → **USB debugging** on.
+2. Plug it in over USB. If `adb` is installed, run `adb kill-server` first (only one program can claim the USB interface).
+3. Open the page in **Chrome or Edge on a computer** (WebUSB is not available in Firefox, Safari or mobile browsers).
+4. Press **Connect phone**, choose the phone, then tap **Allow** on the phone's RSA prompt.
+   The browser keeps its ADB key in IndexedDB, so "Always allow" works across visits.
 
-## Run
+Windows may need the phone's ADB USB driver (e.g. Google USB Driver) for WebUSB to see it.
+
+## Development
 
 ```sh
 npm install
-npm start            # http://127.0.0.1:8000
+npm run dev       # http://localhost:5173 (WebUSB works on localhost)
+npm run build     # static site in dist/
 ```
 
-Open the page, pick the device, then press **Connect**.
+Pushing to `main` deploys `dist/` to GitHub Pages (`.github/workflows/deploy.yml`).
 
-Environment variables: `PORT` (8000), `HOST` (127.0.0.1; set `0.0.0.0` to allow LAN access, but anyone
-who can reach it can control the phone), `ADB`, `SCRCPY_SERVER_PATH`, `SCRCPY_VERSION`.
+## Credits
 
-Wireless: `adb tcpip 5555 && adb connect <phone-ip>:5555`, then refresh the device list.
-
-## Controls
-
-| Input | Action |
-|---|---|
-| Click / drag, touch (multi-touch) | Touch |
-| Right click | Back |
-| Middle click | Home |
-| Mouse wheel | Scroll |
-| Typing (after clicking the screen) | Text and keys (Enter, Backspace, arrows, …) |
-| Ctrl/⌘+V | Paste the computer's clipboard on the phone |
-| Side buttons | Back, Home, Recents, Volume, Power, Rotate, Notifications, Screenshot, Fullscreen |
+- [scrcpy](https://github.com/Genymobile/scrcpy) by Genymobile (Apache-2.0). `public/scrcpy-server-v3.3.3` is the unmodified
+  release file (sha256 `7e70323ba7f259649dd4acce97ac4fefbae8102b2c6d91e2e7be613fd5354be0`).
+- [Tango / ya-webadb](https://github.com/yume-chan/ya-webadb) by Simon Chan (MIT) for ADB over WebUSB and the scrcpy client.
+  Tango supports scrcpy-server up to 3.3.3, which is why the site ships that version.
