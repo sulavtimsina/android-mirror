@@ -12,6 +12,7 @@ import {
   BitmapVideoFrameRenderer, WebCodecsVideoDecoder, WebGLVideoFrameRenderer,
 } from '@yume-chan/scrcpy-decoder-webcodecs';
 import { ReadableStream, WritableStream } from '@yume-chan/stream-extra';
+import { errorInfo, track } from './telemetry.js';
 
 // Must match the version of public/scrcpy-server-v3.3.3 (the newest one Tango supports).
 const SERVER_URL = new URL('scrcpy-server-v3.3.3', document.baseURI).href;
@@ -65,21 +66,43 @@ async function loadServer() {
 }
 
 async function connect() {
+  const settings = { maxSize: $('maxSize').value, bitRate: $('bitRate').value, maxFps: $('maxFps').value };
+  track('connect_click', settings);
   const manager = AdbDaemonWebUsbDeviceManager.BROWSER;
   if (!manager) {
+    track('error', { step: 'support', message: 'no WebUSB' });
     setStatus('This browser has no WebUSB. Use Chrome or Edge on a computer.', 'error');
     return;
   }
   if (!WebCodecsVideoDecoder.isSupported) {
+    track('error', { step: 'support', message: 'no WebCodecs' });
     setStatus('This browser has no WebCodecs video decoding. Use a recent Chrome or Edge.', 'error');
     return;
   }
 
-  const device = await manager.requestDevice();
-  if (!device) return; // user closed the chooser
+  let device;
+  try {
+    device = await manager.requestDevice();
+  } catch (err) {
+    track('error', { step: 'chooser', ...errorInfo(err) });
+    setStatus(err.message || String(err), 'error');
+    return;
+  }
+  if (!device) {
+    track('chooser_cancelled');
+    return;
+  }
+  const hex = (n) => n.toString(16).padStart(4, '0');
+  track('device_chosen', {
+    product: device.raw.productName, maker: device.raw.manufacturerName,
+    usb: `${hex(device.raw.vendorId)}:${hex(device.raw.productId)}`,
+  });
 
   setBusy(true);
   let adb;
+  let step = 'usb_open';
+  const startedAt = Date.now();
+  const serverLog = []; // last lines printed by scrcpy-server, sent with failures
   try {
     setStatus('Opening USB connection…');
     let connection;
@@ -94,6 +117,8 @@ async function connect() {
       throw err;
     }
 
+    step = 'auth';
+    track('step', { step });
     setStatus('Waiting for you to tap "Allow" on the phone…');
     const transport = await AdbDaemonTransport.authenticate({
       serial: device.serial,
@@ -102,6 +127,12 @@ async function connect() {
     });
     adb = new Adb(transport);
 
+    step = 'push_server';
+    track('step', {
+      step,
+      authSeconds: Math.round((Date.now() - startedAt) / 1000),
+      model: adb.banner.model, productCode: adb.banner.product,
+    });
     setStatus('Starting mirror on the phone…');
     const bytes = await loadServer();
     await AdbScrcpyClient.pushServer(adb, new ReadableStream({
@@ -124,12 +155,21 @@ async function connect() {
       logLevel: 'info',
     }, { version: '3.3.3' });
 
+    step = 'start_server';
+    track('step', { step });
     const client = await AdbScrcpyClient.start(adb, DefaultServerPath, options);
 
     // Every stream from the server must be drained, or the ADB connection stalls.
-    client.output.pipeTo(new WritableStream({ write: (line) => console.log('[scrcpy]', line) })).catch(() => {});
+    client.output.pipeTo(new WritableStream({
+      write: (line) => {
+        console.log('[scrcpy]', line);
+        serverLog.push(line.slice(0, 200));
+        if (serverLog.length > 12) serverLog.shift();
+      },
+    })).catch(() => {});
     client.clipboard?.pipeTo(new WritableStream({ write: () => {} })).catch(() => {});
 
+    step = 'video_stream';
     const video = await client.videoStream;
     if (!video) throw new Error('The phone did not send a video stream');
     videoW = video.width;
@@ -152,11 +192,32 @@ async function connect() {
     canvas.focus();
 
     const current = session;
-    Promise.race([client.exited, adb.disconnected]).then(() => {
-      if (session === current) teardown('Disconnected');
+    track('live', {
+      seconds: Math.round((Date.now() - startedAt) / 1000),
+      width: videoW, height: videoH, codec: video.metadata.codec,
     });
+    // Did any frame actually reach the screen?
+    setTimeout(() => {
+      if (session !== current) return;
+      if (decoder.framesRendered > 0) {
+        track('video_ok', { frames: decoder.framesRendered, skipped: decoder.framesSkipped });
+      } else {
+        track('no_video', { frames: 0, serverLog: serverLog.join(' | ') });
+      }
+    }, 5000);
+    Promise.race([client.exited, adb.disconnected]).then(() => {
+      if (session === current) {
+        track('disconnect', {
+          reason: 'device_or_server', seconds: Math.round((Date.now() - startedAt) / 1000),
+          serverLog: serverLog.slice(-5).join(' | '),
+        });
+        teardown('Disconnected');
+      }
+    });
+    current.startedAt = startedAt;
   } catch (err) {
     console.error(err);
+    track('error', { step, ...errorInfo(err), serverLog: serverLog.join(' | ') || undefined });
     if (adb) adb.close().catch(() => {});
     setStatus(err.message || String(err), 'error');
   } finally {
@@ -333,5 +394,18 @@ document.querySelectorAll('.controls button').forEach((btn) => {
   });
 });
 
-connectBtn.addEventListener('click', () => (session ? teardown() : connect()));
+connectBtn.addEventListener('click', () => {
+  if (session) {
+    track('disconnect', { reason: 'user', seconds: Math.round((Date.now() - session.startedAt) / 1000) });
+    teardown();
+  } else {
+    connect();
+  }
+});
+
+track('page_open', {
+  webusb: 'usb' in navigator,
+  webcodecs: WebCodecsVideoDecoder.isSupported,
+  referrer: document.referrer ? new URL(document.referrer).hostname : undefined,
+});
 window.addEventListener('beforeunload', () => { if (session) teardown(); });
