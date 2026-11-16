@@ -87,7 +87,9 @@ async function connect() {
       connection = await device.connect();
     } catch (err) {
       if (err instanceof AdbDaemonWebUsbDevice.DeviceBusyError) {
-        throw new Error('The phone is in use by another program. Run "adb kill-server" (or close Android Studio/scrcpy) and try again.');
+        throw new Error('The browser could not take control of the phone\'s USB connection. Close any other tab or browser using it, '
+          + 'quit Android Studio, scrcpy or phone-manager apps, run "adb kill-server" if adb is installed, '
+          + 'then unplug and replug the phone. On Windows, the phone may need the Google USB Driver.');
       }
       throw err;
     }
