@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Android Mirror</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="bar">
+    <strong class="brand">Android Mirror</strong>
+    <label>Device
+      <select id="device"></select>
+    </label>
+    <button id="refresh" title="Refresh device list">↻</button>
+    <label>Size
+      <select id="maxSize">
+        <option value="0">Native</option>
+        <option value="1920">1920</option>
+        <option value="1280" selected>1280</option>
+        <option value="1024">1024</option>
+        <option value="800">800</option>
+      </select>
+    </label>
+    <label>Bitrate
+      <select id="bitRate">
+        <option value="2000000">2 Mbps</option>
+        <option value="4000000">4 Mbps</option>
+        <option value="8000000" selected>8 Mbps</option>
+        <option value="16000000">16 Mbps</option>
+      </select>
+    </label>
+    <label>FPS
+      <select id="maxFps">
+        <option value="30">30</option>
+        <option value="60" selected>60</option>
+      </select>
+    </label>
+    <button id="connect" class="primary">Connect</button>
+    <span id="status" class="status">Disconnected</span>
+  </header>
+
+  <main class="stage">
+    <div class="screen-wrap">
+      <canvas id="screen" tabindex="0" width="360" height="760"></canvas>
+      <div id="placeholder" class="placeholder">
+        <p>Connect an Android phone over USB with <b>USB debugging</b> enabled, then press <b>Connect</b>.</p>
+      </div>
+    </div>
+    <nav class="controls" aria-label="Device controls">
+      <button data-action="back" title="Back (right click)">◁</button>
+      <button data-action="home" title="Home (middle click)">○</button>
+      <button data-action="recents" title="Recent apps">▢</button>
+      <hr>
+      <button data-action="volup" title="Volume up">🔊</button>
+      <button data-action="voldown" title="Volume down">🔉</button>
+      <button data-action="power" title="Power">⏻</button>
+      <hr>
+      <button data-action="rotate" title="Rotate device">⟳</button>
+      <button data-action="notifications" title="Notification panel">☰</button>
+      <button data-action="screenshot" title="Save screenshot">📷</button>
+      <button data-action="fullscreen" title="Fullscreen">⛶</button>
+    </nav>
+  </main>
+
+  <footer class="hint">
+    Click/drag = touch · Right click = back · Middle click = home · Wheel = scroll · Click the screen, then type to send keys · Ctrl/⌘+V pastes your clipboard
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
